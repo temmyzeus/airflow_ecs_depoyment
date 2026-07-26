@@ -1,0 +1,48 @@
+name: Build Docker image & Publish to ECR
+on:
+  workflow_dispatch:
+
+env:
+  AWS_ECR_REGION: ${{ vars.AWS_ECR_REGION }}
+
+jobs:
+  ECR_Airflow_Deployment:
+    runs-on: ubuntu-latest
+
+    # https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws#adding-permissions-settings
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.1
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/achs/deployment/${{ inputs.github_iam_role }}
+          role-session-name: Github-Actions-Session
+          aws-region: ${{ env.AWS_ECR_REGION }}
+          output-credentials: true
+
+      - name: Get Caller Identity
+        run: |
+          aws sts get-caller-identity
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-publish
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
+          ECR_IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker buildx build -t $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE_TAG -f Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE_TAG
