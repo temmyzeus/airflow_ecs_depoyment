@@ -53,19 +53,18 @@ jobs:
           docker buildx build -t ${{ env.ECR_IMAGE_URI }} -f Dockerfile .
           docker push ${{ env.ECR_IMAGE_URI }}
 
-      # - name: Render Amazon ECS task definition
-      #   id: render-airflow-api-server-container
-      #   uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
-      #   with:
-      #     task-definition: airflow_cluster_fargate.json
-      #     task-definition-arn:  task-definition-arn
-      #     task-definition-family: task-definition-family-name
-      #     container-name: web
-      #     image: ${{ env.ECR_IMAGE_URI }}
+      - name: Render Amazon ECS task definition
+        id: render-airflow-api-server-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
+        with:
+          task-definition-family: airflow-cluster-task-definition
+          container-name: airflow-standalone
+          image: ${{ env.ECR_IMAGE_URI }}
 
-      # - name: Deploy to Amazon ECS service
-      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-      #   with:
-      #     task-definition: ${{ steps.render-airflow-api-server-container.outputs.task-definition }}
-      #     service: my-service
-      #     cluster: my-cluster
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-airflow-api-server-container.outputs.task-definition }}
+          cluster: airflow-cluster
+          service: airflow-standalone-service
+          wait-for-service-stability: true
