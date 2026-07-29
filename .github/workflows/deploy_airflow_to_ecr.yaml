@@ -4,6 +4,9 @@ on:
 
 env:
   AWS_ECR_REGION: ${{ vars.AWS_ECR_REGION }}
+  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
+  ECR_IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   ECR_Airflow_Deployment:
@@ -46,9 +49,24 @@ jobs:
         id: build-publish
         shell: bash
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
-          ECR_IMAGE_TAG: ${{ github.sha }}
+          ECR_IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.ECR_IMAGE_TAG }}
         run: |
-          docker buildx build -t $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE_TAG -f Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE_TAG
+          docker buildx build -t ${{ env.ECR_IMAGE_URI }} -f Dockerfile .
+          docker push ${{ env.ECR_IMAGE_URI }}
+
+      # - name: Render Amazon ECS task definition
+      #   id: render-airflow-api-server-container
+      #   uses: aws-actions/amazon-ecs-render-task-definition@v1.9.0
+      #   with:
+      #     task-definition: airflow_cluster_fargate.json
+      #     task-definition-arn:  task-definition-arn
+      #     task-definition-family: task-definition-family-name
+      #     container-name: web
+      #     image: ${{ env.ECR_IMAGE_URI }}
+
+      # - name: Deploy to Amazon ECS service
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      #   with:
+      #     task-definition: ${{ steps.render-airflow-api-server-container.outputs.task-definition }}
+      #     service: my-service
+      #     cluster: my-cluster
