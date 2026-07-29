@@ -4,7 +4,6 @@ on:
 
 env:
   AWS_ECR_REGION: ${{ vars.AWS_ECR_REGION }}
-  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
   ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
   ECR_IMAGE_TAG: ${{ github.sha }}
 
@@ -40,7 +39,7 @@ jobs:
       - name: Get Caller Identity
         run: |
           aws sts get-caller-identity
-      
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
