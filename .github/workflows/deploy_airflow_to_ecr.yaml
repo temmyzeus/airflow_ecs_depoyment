@@ -52,6 +52,7 @@ jobs:
         run: |
           docker buildx build -t ${{ env.ECR_IMAGE_URI }} -f Dockerfile .
           docker push ${{ env.ECR_IMAGE_URI }}
+          echo "ecr_image_uri=${{ env.ECR_IMAGE_URI }}" >> "$GITHUB_OUTPUT"
 
       - name: Render Amazon ECS task definition
         id: render-airflow-api-server-container
@@ -59,7 +60,7 @@ jobs:
         with:
           task-definition-family: airflow-cluster-task-definition
           container-name: airflow-standalone
-          image: ${{ env.ECR_IMAGE_URI }}
+          image: ${{ steps.build-publish.outputs.ecr_image_uri }}
 
       - name: Deploy to Amazon ECS service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
