@@ -77,6 +77,15 @@ resource "aws_iam_policy" "gh_action_auth_publish_policy" {
           "Resource" : [
             aws_ecr_repository.airflow_repo.arn
           ]
+        },
+        {
+          "Sid" : "UpdateECSTaskDefinition",
+          "Action" : [
+            "ecs:DescribeTaskDefinition",
+            "ecs:RegisterTaskDefinition"
+          ],
+          "Effect" : "Allow",
+          "Resource" : "*"
         }
       ]
     }
