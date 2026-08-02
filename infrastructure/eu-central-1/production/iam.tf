@@ -51,45 +51,69 @@ resource "aws_iam_role" "gh_action_role" {
 resource "aws_iam_policy" "gh_action_auth_publish_policy" {
   name = "ECRAuthPublishPolicy"
   path = local.iam_path
-  policy = jsonencode(
-    {
-      "Version" : "2012-10-17",
-      "Statement" : [
-        {
-          "Sid" : "GetAuthorizationToken",
-          "Action" : [
-            "ecr:GetAuthorizationToken"
-          ],
-          "Effect" : "Allow",
-          "Resource" : "*"
-        },
-        {
-          "Sid" : "AllowECRImagePublish",
-          "Action" : [
-            "ecr:CompleteLayerUpload",
-            "ecr:UploadLayerPart",
-            "ecr:InitiateLayerUpload",
-            "ecr:BatchCheckLayerAvailability",
-            "ecr:PutImage",
-            "ecr:BatchGetImage"
-          ],
-          "Effect" : "Allow",
-          "Resource" : [
-            aws_ecr_repository.airflow_repo.arn
-          ]
-        },
-        {
-          "Sid" : "UpdateECSTaskDefinition",
-          "Action" : [
-            "ecs:DescribeTaskDefinition",
-            "ecs:RegisterTaskDefinition"
-          ],
-          "Effect" : "Allow",
-          "Resource" : "*"
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Sid" : "ECRAuth",
+        "Effect" : "Allow",
+        "Action" : "ecr:GetAuthorizationToken",
+        "Resource" : "*"
+      },
+      {
+        "Sid" : "ECRPushPull",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ],
+        "Resource" : aws_ecr_repository.airflow_repo.arn
+      },
+      {
+        "Sid" : "RegisterTaskDefinition",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecs:RegisterTaskDefinition",
+          "ecs:DescribeTaskDefinition",
+          "ecs:TagResource"
+        ],
+        "Resource" : "*"
+      },
+      {
+        "Sid" : "PassRolesToECS",
+        "Effect" : "Allow",
+        "Action" : "iam:PassRole",
+        "Resource" : [
+          aws_iam_role.airflow_cluster_execution_role.arn,
+          aws_iam_role.airflow_cluster_task_role.arn
+        ],
+        "Condition" : {
+          "StringEquals" : {
+            "iam:PassedToService" : "ecs-tasks.amazonaws.com"
+          }
         }
-      ]
-    }
-  )
+      },
+      {
+        "Sid" : "DeployToECS",
+        "Effect" : "Allow",
+        "Action" : [
+          "ecs:UpdateService",
+          "ecs:DescribeServices"
+        ],
+        "Resource" : "arn:aws:ecs:*:${data.aws_caller_identity.current.account_id}:service/${aws_ecs_cluster.airflow_cluster.name}/*"
+      },
+      {
+        "Sid" : "DescribeClusterForDeploy",
+        "Effect" : "Allow",
+        "Action" : "ecs:DescribeClusters",
+        "Resource" : aws_ecs_cluster.airflow_cluster.arn
+      }
+    ]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "attach_airflow_cluster_execution_role_policy" {
