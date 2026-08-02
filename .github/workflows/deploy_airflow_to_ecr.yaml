@@ -67,5 +67,3 @@ jobs:
         with:
           task-definition: ${{ steps.render-airflow-api-server-container.outputs.task-definition }}
           cluster: airflow-cluster
-          service: airflow-standalone-service
-          wait-for-service-stability: true
