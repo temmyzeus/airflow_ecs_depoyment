@@ -182,6 +182,11 @@ resource "aws_iam_policy" "airflow_cluster_execution_role_policy" {
   )
 }
 
+resource "aws_iam_role_policy_attachment" "attach_airflow_cluster_task_role_policy" {
+  role       = aws_iam_role.airflow_cluster_task_role.name
+  policy_arn = aws_iam_policy.airflow_cluster_task_role_policy.arn
+}
+
 resource "aws_iam_role" "airflow_cluster_task_role" {
   name = "AirflowClusterECSTaskRole"
   path = local.iam_path
@@ -197,6 +202,28 @@ resource "aws_iam_role" "airflow_cluster_task_role" {
           "Principal" : {
             "Service" : "ecs-tasks.amazonaws.com"
           }
+        }
+      ]
+    }
+  )
+}
+
+resource "aws_iam_policy" "airflow_cluster_task_role_policy" {
+  name = "AirflowClusterECSTaskRolePolicy"
+  path = local.iam_path
+  policy = jsonencode(
+    {
+      "Version" : "2012-10-17",
+      "Statement" : [
+        {
+          "Effect" : "Allow",
+          "Action" : [
+            "ssmmessages:CreateControlChannel",
+            "ssmmessages:CreateDataChannel",
+            "ssmmessages:OpenControlChannel",
+            "ssmmessages:OpenDataChannel"
+          ],
+          "Resource" : "*"
         }
       ]
     }
