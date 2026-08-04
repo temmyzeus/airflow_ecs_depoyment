@@ -37,22 +37,15 @@ resource "aws_ecs_task_definition" "airflow_cluster_task_definition" {
     size_in_gib = 21
   }
 
-  volume {
-    name = "airflow-dags"
-  }
-
-  volume {
-    name = "airflow-logs"
-  }
-
   container_definitions = jsonencode([
     {
       name      = "airflow-standalone"
       essential = true
-      command   = ["airflow", "standalone"]
+      command   = ["standalone"]
       image     = "${aws_ecr_repository.airflow_repo.repository_url}:latest"
-      cpu       = 512
-      memory    = 1024
+      cpu       = 4096
+      memory    = 4096
+      user      = "airflow"
 
       portMappings = [
         {
@@ -61,31 +54,9 @@ resource "aws_ecs_task_definition" "airflow_cluster_task_definition" {
         }
       ]
 
-      mountPoints = [
-        {
-          sourceVolume  = "airflow-dags"
-          containerPath = "/opt/airflow/dags"
-          readOnly      = true
-        },
-        {
-          sourceVolume  = "airflow-logs"
-          containerPath = "/opt/airflow/logs"
-        }
-      ]
-
       environment = [
-        { name = "AIRFLOW__CORE__EXECUTOR", value = "CeleryExecutor" },
-        { name = "AIRFLOW__CORE__LOAD_EXAMPLES", value = "false" },
-        { name = "AIRFLOW__API__EXPOSE_CONFIG", value = "false" },
-        # { name = "AIRFLOW__CELERY__BROKER_URL", value = "sqs://<BROKER_ENDPOINT>" },
-        # { name = "AIRFLOW__CELERY__RESULT_BACKEND", value = "db+postgresql://<DB_HOST>:5432/airflow" }
+        { name = "AIRFLOW__API__PORT", value = "8080" }
       ]
-
-      # secrets = [
-      #   { name = "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN", valueFrom = "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:airflow/db-conn" },
-      #   { name = "AIRFLOW__CORE__FERNET_KEY", valueFrom = "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:airflow/fernet-key" },
-      #   { name = "AIRFLOW__API_AUTH__JWT_SECRET", valueFrom = "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:airflow/jwt-secret" }
-      # ]
 
       logConfiguration = {
         logDriver = "awslogs"
