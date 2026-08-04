@@ -45,7 +45,6 @@ resource "aws_ecs_task_definition" "airflow_cluster_task_definition" {
       image     = "${aws_ecr_repository.airflow_repo.repository_url}:latest"
       cpu       = 4096
       memory    = 4096
-      user      = "airflow"
 
       portMappings = [
         {
